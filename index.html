@@ -10,7 +10,7 @@
         html, body {
             margin: 0;
             padding: 0;
-            background: #ffffff; /* PURE WHITE */
+            background: #080808;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -35,10 +35,76 @@
         #flash-container > ruffle-player {
             width: 100%;
             height: 100%;
+            opacity: 0;
+            transition: opacity 500ms ease;
+        }
+
+        #flash-container > ruffle-player.is-ready {
+            opacity: 1;
+        }
+
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at center, #252525 0%, #080808 72%);
+            color: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+            letter-spacing: 0.18em;
+            transition: opacity 550ms ease, visibility 550ms ease;
+        }
+
+        #loading-screen.is-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loading-content {
+            display: grid;
+            justify-items: center;
+            gap: 22px;
+            text-align: center;
+        }
+
+        .loading-title {
+            margin: 0;
+            font-size: clamp(18px, 3vw, 34px);
+            font-weight: 700;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff665e;
+            animation: loading-pulse 900ms ease-in-out infinite;
+        }
+
+        .loading-dots span:nth-child(2) { animation-delay: 150ms; }
+        .loading-dots span:nth-child(3) { animation-delay: 300ms; }
+
+        @keyframes loading-pulse {
+            0%, 100% { opacity: 0.3; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-5px); }
         }
     </style>
 </head>
 <body>
+
+<div id="loading-screen" role="status" aria-live="polite">
+    <div class="loading-content">
+        <p class="loading-title">PRODBYXANDER PRESENTS</p>
+        <div class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
+</div>
 
 <div id="flash-container"></div>
 
@@ -49,9 +115,29 @@
     player.style.height = "100%";
 
     const container = document.getElementById("flash-container");
+    const loadingScreen = document.getElementById("loading-screen");
     container.appendChild(player);
 
-    player.load("wybmodded.swf");
+    let gameRevealed = false;
+    function revealGame() {
+        if (gameRevealed) return;
+        gameRevealed = true;
+        player.classList.add("is-ready");
+        loadingScreen.classList.add("is-hidden");
+    }
+
+    const loadResult = player.load("wybmodded.swf");
+
+    // Prefer the load promise; some Ruffle builds do not dispatch `loaded`.
+    if (loadResult && typeof loadResult.then === "function") {
+        loadResult.then(revealGame).catch(revealGame);
+    }
+
+    // Keep the event as a compatibility fallback for older Ruffle builds.
+    player.addEventListener("loaded", revealGame, { once: true });
+
+    // Never leave the user on a loading screen if the SWF reports no event.
+    window.setTimeout(revealGame, 12000);
 
     // Fullscreen is only allowed automatically when the browser grants it.
     // A rejected request must not prevent the SWF from loading.
@@ -66,7 +152,9 @@
     }
 
     // Try when loaded, then retry once from a user gesture if the browser blocked it.
-    player.addEventListener("loaded", tryFullscreen, { once: true });
+    player.addEventListener("loaded", () => {
+        tryFullscreen();
+    });
     document.addEventListener("click", tryFullscreen, { once: true });
 </script>
 
