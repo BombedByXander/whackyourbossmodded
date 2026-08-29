@@ -45,15 +45,20 @@
 
     player.load("wybmodded.swf");
 
-    // Auto fullscreen
-    function tryFullscreen() {
-        player.requestFullscreen();
+    // Fullscreen is only allowed automatically when the browser grants it.
+    // A rejected request must not prevent the SWF from loading.
+    async function tryFullscreen() {
+        if (document.fullscreenElement || !player.requestFullscreen) return;
+
+        try {
+            await player.requestFullscreen();
+        } catch (_) {
+            // Browsers commonly reject fullscreen until the user interacts.
+        }
     }
 
-    // Try when loaded
-    player.addEventListener("loaded", tryFullscreen);
-
-    // If blocked, activate fullscreen on first click
+    // Try when loaded, then retry once from a user gesture if the browser blocked it.
+    player.addEventListener("loaded", tryFullscreen, { once: true });
     document.addEventListener("click", tryFullscreen, { once: true });
 </script>
 
