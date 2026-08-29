@@ -124,20 +124,29 @@
         gameRevealed = true;
         player.classList.add("is-ready");
         loadingScreen.classList.add("is-hidden");
+        tryFullscreen();
+    }
+
+    let gameLoaded = false;
+    function finishLoading() {
+        if (gameLoaded) return;
+        gameLoaded = true;
+        // Let the SWF's old intro finish behind the branded loading screen.
+        window.setTimeout(revealGame, 7600);
     }
 
     const loadResult = player.load("wybmodded.swf");
 
     // Prefer the load promise; some Ruffle builds do not dispatch `loaded`.
     if (loadResult && typeof loadResult.then === "function") {
-        loadResult.then(revealGame).catch(revealGame);
+        loadResult.then(finishLoading).catch(finishLoading);
     }
 
     // Keep the event as a compatibility fallback for older Ruffle builds.
-    player.addEventListener("loaded", revealGame, { once: true });
+    player.addEventListener("loaded", finishLoading, { once: true });
 
     // Never leave the user on a loading screen if the SWF reports no event.
-    window.setTimeout(revealGame, 12000);
+    window.setTimeout(revealGame, 15000);
 
     // Fullscreen is only allowed automatically when the browser grants it.
     // A rejected request must not prevent the SWF from loading.
@@ -152,9 +161,6 @@
     }
 
     // Try when loaded, then retry once from a user gesture if the browser blocked it.
-    player.addEventListener("loaded", () => {
-        tryFullscreen();
-    });
     document.addEventListener("click", tryFullscreen, { once: true });
 </script>
 
